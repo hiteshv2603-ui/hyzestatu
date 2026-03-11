@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyzeBot · Status Monitor</title>
+    <!-- same fonts & icons as HyzeBot -->
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Hyze theme variables (dark/light from original) */
+        :root {
+            --bg-primary: #151A28;
+            --bg-secondary: #161c2d;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --border-color: rgba(255, 255, 255, 0.085);
+            --accent-color: #577db7;
+            --card-bg: #1d2335;
+            --success: #40c057;
+            --warning: #fab005;
+            --danger: #fa5252;
+            --info: #577db7;
+        }
+
+        .light-mode {
+            --bg-primary: #DCF3FF;
+            --bg-secondary: #DCF3FF;
+            --text-primary: #2C64BA;
+            --text-secondary: #255092;
+            --border-color: #2c65ba53;
+            --accent-color: #2C64BA;
+            --card-bg: #c3ddeb;
+            --success: #40c057;
+            --warning: #e67700;
+            --danger: #c92a2a;
+            --info: #2C64BA;
+        }
+
+        body {
+            font-family: 'Lexend', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        /* header with logo & theme toggle */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 600;
+            color: var(--bg-primary);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .logo-text h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        .logo-text .tag {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 40px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--text-primary);
+        }
+        .theme-toggle:hover {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+            border-color: var(--accent-color);
+        }
+
+        /* status cards */
+        .status-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            margin: 30px 0;
+        }
+
+        .endpoint-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .endpoint-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .card-header i {
+            font-size: 28px;
+            color: var(--accent-color);
+            width: 40px;
+        }
+        .card-header h2 {
+            font-size: 1.4rem;
+            font-weight: 500;
+        }
+        .card-header .endpoint-url {
+            background: var(--bg-primary);
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            margin-left: auto;
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+        }
+        .status-badge i {
+            font-size: 1.2rem;
+        }
+        .status-badge.online i { color: var(--success); }
+        .status-badge.degraded i { color: var(--warning); }
+        .status-badge.offline i { color: var(--danger); }
+
+        .response-time {
+            background: var(--bg-primary);
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .error-detail {
+            background: rgba(250, 82, 82, 0.1);
+            border-left: 4px solid var(--danger);
+            padding: 16px 20px;
+            border-radius: 16px;
+            margin: 16px 0 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            word-break: break-word;
+            color: var(--text-primary);
+        }
+
+        .info-note {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(87, 125, 183, 0.15);
+            padding: 12px 18px;
+            border-radius: 40px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            border: 1px dashed var(--accent-color);
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin: 32px 0 16px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 14px 32px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+            font-family: 'Lexend', sans-serif;
+        }
+        .btn:hover {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+            border-color: var(--accent-color);
+        }
+        .btn i {
+            font-size: 1.2rem;
+        }
+
+        .footer-note {
+            margin-top: 40px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* spinner */
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* utility */
+        .highlight {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        .small-meta {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- header with theme toggle (matches Hyze style) -->
+        <div class="header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <img src="https://i.imgur.com/3TQgMBb.png" alt="Hyze" style="width:40px; height:40px; object-fit:contain; filter: brightness(0) invert(1);">
+                </div>
+                <div class="logo-text">
+                    <h1>HyzeBot <span style="font-weight:300; opacity:0.7;">status</span></h1>
+                    <div class="tag">api health monitor · vercel endpoints</div>
+                </div>
+            </div>
+            <div class="theme-toggle" id="themeToggle" title="toggle light/dark">
+                <i class="fas fa-moon" id="themeIcon"></i>
+                <span id="themeLabel">Dark</span>
+            </div>
+        </div>
+
+        <!-- status cards for two endpoints -->
+        <div class="status-grid">
+            <!-- PRIMARY: /api/chat -->
+            <div class="endpoint-card" id="cardPrimary">
+                <div class="card-header">
+                    <i class="fas fa-comment-dots"></i>
+                    <h2>primary · chat</h2>
+                    <span class="endpoint-url">/api/chat</span>
+                </div>
+                <div class="status-row">
+                    <div class="status-badge" id="primaryBadge">
+                        <i class="fas fa-circle"></i>
+                        <span id="primaryStatusText">checking...</span>
+                    </div>
+                    <div class="response-time" id="primaryTime">
+                        <i class="fas fa-stopwatch"></i> <span>—</span>
+                    </div>
+                </div>
+                <div id="primaryError" class="error-detail" style="display: none;"></div>
+                <div class="info-note" id="primaryInfo">
+                    <i class="fas fa-info-circle"></i>
+                    <span>using POST · expects 200 or 429/5xx</span>
+                </div>
+            </div>
+
+            <!-- FALLBACK: /api/gemini -->
+            <div class="endpoint-card" id="cardFallback">
+                <div class="card-header">
+                    <i class="fas fa-cloud"></i>
+                    <h2>fallback · gemini</h2>
+                    <span class="endpoint-url">/api/gemini</span>
+                </div>
+                <div class="status-row">
+                    <div class="status-badge" id="fallbackBadge">
+                        <i class="fas fa-circle"></i>
+                        <span id="fallbackStatusText">checking...</span>
+                    </div>
+                    <div class="response-time" id="fallbackTime">
+                        <i class="fas fa-stopwatch"></i> <span>—</span>
+                    </div>
+                </div>
+                <div id="fallbackError" class="error-detail" style="display: none;"></div>
+                <div class="info-note">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>auto fallback if primary fails</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- control buttons -->
+        <div class="action-bar">
+            <button class="btn" id="refreshBtn"><i class="fas fa-sync-alt"></i> refresh now</button>
+            <button class="btn" id="historyBtn" onclick="window.location.reload()"><i class="fas fa-redo-alt"></i> reset test</button>
+        </div>
+
+        <!-- last updated & uptime hint -->
+        <div style="text-align:center; margin-top:20px;" class="small-meta" id="lastUpdated">
+            last check: —
+        </div>
+
+        <div class="footer-note">
+            <i class="fas fa-microchip"></i> Hyze internal monitor · simulates light probe to verify reachability
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ---------- theme handling (same as original) ----------
+            const isLightMode = localStorage.getItem('hiteshai_theme') === 'light';
+            const body = document.body;
+            if (isLightMode) body.classList.add('light-mode');
+
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const themeLabel = document.getElementById('themeLabel');
+
+            function updateThemeUI() {
+                if (body.classList.contains('light-mode')) {
+                    themeIcon.className = 'fas fa-sun';
+                    themeLabel.innerText = 'Light';
+                } else {
+                    themeIcon.className = 'fas fa-moon';
+                    themeLabel.innerText = 'Dark';
+                }
+            }
+            updateThemeUI();
+
+            themeToggle.addEventListener('click', () => {
+                body.classList.toggle('light-mode');
+                localStorage.setItem('hiteshai_theme', body.classList.contains('light-mode') ? 'light' : 'dark');
+                updateThemeUI();
+            });
+
+            // ---------- status check logic ----------
+            const PRIMARY_URL = 'https://hyzelabsdev.vercel.app/api/chat';
+            const FALLBACK_URL = 'https://hyzelabsdev.vercel.app/api/gemini';
+
+            // minimal probe payload (safe, very low token)
+            const probePayload = {
+                model: 'llama-3.3-70b-versatile',
+                messages: [
+                    { role: 'system', content: 'You are a reachability probe. Reply with "OK".' },
+                    { role: 'user', content: 'ping' }
+                ],
+                max_tokens: 5,
+                temperature: 0.1
+            };
+
+            // DOM elements
+            const primaryBadge = document.getElementById('primaryBadge');
+            const primaryStatusText = document.getElementById('primaryStatusText');
+            const primaryTime = document.getElementById('primaryTime').querySelector('span');
+            const primaryErrorDiv = document.getElementById('primaryError');
+
+            const fallbackBadge = document.getElementById('fallbackBadge');
+            const fallbackStatusText = document.getElementById('fallbackStatusText');
+            const fallbackTime = document.getElementById('fallbackTime').querySelector('span');
+            const fallbackErrorDiv = document.getElementById('fallbackError');
+
+            const lastUpdatedSpan = document.getElementById('lastUpdated').querySelector('span');
+
+            // helper to format status
+            function setStatus(element, state, text, timeMs = null, errorDetail = null, errorContainer = null) {
+                // state: 'online', 'degraded', 'offline'
+                const badge = element.querySelector('.status-badge') || element; // element is the badge itself if passed directly
+                const icon = element.querySelector('i');
+                const span = element.querySelector('span:not(.fa)') || element.querySelector('span');
+                
+                // update badge class
+                element.classList.remove('online', 'degraded', 'offline');
+                element.classList.add(state);
+                if (icon) {
+                    if (state === 'online') icon.style.color = 'var(--success)';
+                    else if (state === 'degraded') icon.style.color = 'var(--warning)';
+                    else icon.style.color = 'var(--danger)';
+                }
+                if (span) span.innerText = text;
+
+                // update response time
+                if (timeMs !== null) {
+                    const timeSpan = element.closest('.endpoint-card')?.querySelector('.response-time span');
+                    if (timeSpan) timeSpan.innerText = `${timeMs}ms`;
+                }
+
+                // show error detail if any
+                if (errorContainer) {
+                    if (errorDetail) {
+                        errorContainer.style.display = 'block';
+                        errorContainer.innerHTML = `<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i> ${errorDetail}`;
+                    } else {
+                        errorContainer.style.display = 'none';
+                        errorContainer.innerHTML = '';
+                    }
+                }
+            }
+
+            function updateLastUpdated() {
+                const now = new Date().toLocaleTimeString();
+                document.getElementById('lastUpdated').innerHTML = `last check: <span class="highlight">${now}</span>`;
+            }
+
+            // test single endpoint with timeout
+            async function testEndpoint(url, label, badgeEl, statusTextEl, timeEl, errorDiv) {
+                const start = performance.now();
+                let statusState = 'offline';
+                let statusMessage = 'error';
+                let errorMsg = '';
+                let responseTime = null;
+
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(probePayload),
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                    const end = performance.now();
+                    responseTime = Math.round(end - start);
+
+                    if (response.ok) {
+                        // 200-299 = online
+                        statusState = 'online';
+                        statusMessage = 'operational';
+                        errorMsg = '';
+                    } else {
+                        // 429, 500, etc = degraded/offline
+                        const status = response.status;
+                        let detail = '';
+                        try {
+                            const text = await response.text();
+                            detail = text.slice(0, 200);
+                        } catch (e) {}
+                        errorMsg = `HTTP ${status} · ${detail || response.statusText}`;
+                        statusState = (status === 429 || status >= 500) ? 'degraded' : 'offline';
+                        statusMessage = `error ${status}`;
+                    }
+                } catch (err) {
+                    const end = performance.now();
+                    responseTime = Math.round(end - start);
+                    if (err.name === 'AbortError') {
+                        errorMsg = 'timeout after 8s';
+                        statusState = 'offline';
+                        statusMessage = 'timeout';
+                    } else {
+                        errorMsg = err.message || 'fetch failed';
+                        statusState = 'offline';
+                        statusMessage = 'unreachable';
+                    }
+                }
+
+                // update badge: badgeEl is the .status-badge div
+                const icon = badgeEl.querySelector('i');
+                const textSpan = badgeEl.querySelector('span');
+                badgeEl.classList.remove('online', 'degraded', 'offline');
+                badgeEl.classList.add(statusState);
+                if (icon) icon.style.color = statusState === 'online' ? 'var(--success)' : (statusState === 'degraded' ? 'var(--warning)' : 'var(--danger)');
+                if (textSpan) textSpan.innerText = statusMessage;
+
+                // update time
+                if (timeEl) timeEl.innerText = responseTime ? `${responseTime}ms` : '—';
+
+                // error detail
+                if (errorDiv) {
+                    if (errorMsg) {
+                        errorDiv.style.display = 'block';
+                        errorDiv.innerHTML = `<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i> ${errorMsg}`;
+                    } else {
+                        errorDiv.style.display = 'none';
+                    }
+                }
+
+                return { statusState, responseTime, errorMsg };
+            }
+
+            // test both
+            async function runFullCheck() {
+                // reset
+                primaryErrorDiv.style.display = 'none';
+                fallbackErrorDiv.style.display = 'none';
+
+                // test primary
+                await testEndpoint(
+                    PRIMARY_URL,
+                    'primary',
+                    document.getElementById('primaryBadge'),
+                    primaryStatusText,
+                    primaryTime,
+                    primaryErrorDiv
+                );
+
+                // test fallback
+                await testEndpoint(
+                    FALLBACK_URL,
+                    'fallback',
+                    document.getElementById('fallbackBadge'),
+                    fallbackStatusText,
+                    fallbackTime,
+                    fallbackErrorDiv
+                );
+
+                updateLastUpdated();
+            }
+
+            // initial check on load
+            runFullCheck();
+
+            // refresh button
+            document.getElementById('refreshBtn').addEventListener('click', (e) => {
+                e.preventDefault();
+                // quick animation hint
+                const btn = e.currentTarget;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> testing...';
+                btn.disabled = true;
+                runFullCheck().finally(() => {
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i> refresh now';
+                    btn.disabled = false;
+                });
+            });
+
+            // optional: auto-refresh every 30s
+            let interval = setInterval(() => {
+                runFullCheck();
+            }, 30000);
+
+            // cleanup if needed (but page lifetime)
+        })();
+    </script>
+</body>
+</html>
